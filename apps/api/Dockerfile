@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 COPY package.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared-types/package.json packages/shared-types/package.json
-RUN npm install
+RUN npm install --ignore-scripts
 
 COPY packages/shared-types packages/shared-types
 COPY apps/api apps/api
