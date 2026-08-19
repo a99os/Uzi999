@@ -1,0 +1,202 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  ADMIN
+  DOCTOR
+  MANAGER
+}
+
+enum QueueStatus {
+  WAITING
+  IN_CONSULTATION
+  COMPLETED
+  CANCELLED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum NotificationType {
+  NEW_PATIENT_QUEUED
+  PATIENT_SKIPPED
+  PATIENT_RETURNED
+  SYSTEM
+}
+
+model User {
+  id           String     @id @default(cuid())
+  firstName    String
+  lastName     String
+  username     String     @unique
+  email        String?    @unique
+  passwordHash String
+  status       UserStatus @default(ACTIVE)
+  lastActiveAt DateTime?
+  soundEnabled Boolean    @default(true)
+  customSoundUrl String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  createdById String?
+  createdBy   User?   @relation("CreatedUsers", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers User[] @relation("CreatedUsers")
+
+  roles                  UserRole[]
+  doctorProfile          DoctorProfile?
+  registeredQueueEntries QueueEntry[]   @relation("RegisteredBy")
+  consultations          Consultation[] @relation("ConsultingDoctor")
+  refreshTokens          RefreshToken[]
+  notifications          Notification[]
+}
+
+model Role {
+  id    String     @id @default(cuid())
+  name  RoleName   @unique
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model DoctorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization  String
+  workingSchedule Json?
+  avatarUrl       String?
+
+  queueEntries  QueueEntry[]
+  consultations Consultation[]
+}
+
+model Patient {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  birthYear Int
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  queueEntries QueueEntry[]
+
+  @@index([lastName, firstName, birthYear])
+}
+
+model Service {
+  id        String   @id @default(cuid())
+  name      String
+  category  String
+  price     Decimal  @db.Decimal(10, 2)
+  icon      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  queueEntryServices QueueEntryService[]
+
+  @@index([category])
+}
+
+// One row per patient visit / queue ticket — doubles as "Visit". Can carry
+// multiple services (see QueueEntryService) under one queue number.
+model QueueEntry {
+  id          String      @id @default(cuid())
+  queueNumber Int
+  status      QueueStatus @default(WAITING)
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  doctorProfileId String
+  doctor          DoctorProfile @relation(fields: [doctorProfileId], references: [id])
+
+  registeredById String
+  registeredBy   User   @relation("RegisteredBy", fields: [registeredById], references: [id])
+
+  registeredAt DateTime  @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+
+  totalPrice Decimal @db.Decimal(10, 2)
+
+  services     QueueEntryService[]
+  consultation Consultation?
+
+  @@index([doctorProfileId, status])
+  @@index([registeredAt])
+}
+
+// Snapshot of one service selected for a visit (price at registration time).
+model QueueEntryService {
+  id           String     @id @default(cuid())
+  queueEntryId String
+  queueEntry   QueueEntry @relation(fields: [queueEntryId], references: [id], onDelete: Cascade)
+  serviceId    String
+  service      Service    @relation(fields: [serviceId], references: [id])
+  price        Decimal    @db.Decimal(10, 2)
+
+  @@unique([queueEntryId, serviceId])
+}
+
+model Consultation {
+  id           String     @id @default(cuid())
+  queueEntryId String     @unique
+  queueEntry   QueueEntry @relation(fields: [queueEntryId], references: [id])
+
+  doctorProfileId String
+  doctor          DoctorProfile @relation(fields: [doctorProfileId], references: [id])
+  doctorUserId    String
+  doctorUser      User          @relation("ConsultingDoctor", fields: [doctorUserId], references: [id])
+
+  diagnosis       String?
+  medicalNotes    String?
+  prescription    String?
+  recommendations String?
+  followUpDate    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+}
