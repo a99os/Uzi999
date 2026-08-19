@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import type { ServiceSummary } from "@anora/shared-types";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { getServiceIcon } from "@/lib/icon-map";
@@ -43,6 +44,7 @@ function ServiceFormContent({
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("servicesPage");
   const {
     register,
     handleSubmit,
@@ -70,24 +72,24 @@ function ServiceFormContent({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>
-          {mode === "create" ? "Add Diagnosis / Service" : "Edit Diagnosis / Service"}
+          {mode === "create" ? t("addServiceTitle") : t("editServiceTitle")}
         </DialogTitle>
       </DialogHeader>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <Label>Name</Label>
+          <Label>{t("name")}</Label>
           <Input {...register("name")} />
         </div>
         <div className="space-y-1.5">
-          <Label>Category</Label>
-          <Input placeholder="Consultation, Diagnostics, Lab…" {...register("category")} />
+          <Label>{t("category")}</Label>
+          <Input placeholder={t("categoryPlaceholder")} {...register("category")} />
         </div>
         <div className="space-y-1.5">
-          <Label>Price (so&apos;m)</Label>
+          <Label>{t("price")}</Label>
           <Input type="number" step="0.01" {...register("price", { valueAsNumber: true })} />
         </div>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          Save Service
+          {t("saveService")}
         </Button>
       </form>
     </DialogContent>
@@ -95,6 +97,8 @@ function ServiceFormContent({
 }
 
 export function ServicesManager() {
+  const t = useTranslations("servicesPage");
+  const tCommon = useTranslations("common");
   const confirm = useConfirm();
   const currentUser = useAuthStore((s) => s.user);
   const isAdmin = currentUser?.roles.some((r) => r === "SUPER_ADMIN" || r === "ADMIN") ?? false;
@@ -112,11 +116,11 @@ export function ServicesManager() {
 
   async function toggleActive(service: ServiceSummary, checked: boolean) {
     const ok = await confirm({
-      title: `${checked ? "Activate" : "Deactivate"} ${service.name}?`,
-      description: checked
-        ? "It will become selectable again during registration."
-        : "It will no longer be selectable during registration.",
-      confirmLabel: checked ? "Activate" : "Deactivate",
+      title: checked
+        ? t("activateConfirmTitle", { name: service.name })
+        : t("deactivateConfirmTitle", { name: service.name }),
+      description: checked ? t("activateConfirmDesc") : t("deactivateConfirmDesc"),
+      confirmLabel: checked ? t("activateLabel") : t("deactivateLabel"),
       destructive: !checked,
     });
     if (!ok) return;
@@ -126,9 +130,9 @@ export function ServicesManager() {
 
   async function deleteService(service: ServiceSummary) {
     const ok = await confirm({
-      title: `Delete ${service.name}?`,
-      description: "This cannot be undone.",
-      confirmLabel: "Delete",
+      title: t("deleteConfirmTitle", { name: service.name }),
+      description: tCommon("cannotUndo"),
+      confirmLabel: tCommon("delete"),
       destructive: true,
     });
     if (!ok) return;
@@ -153,7 +157,7 @@ export function ServicesManager() {
         <div className="relative flex-1 min-w-56">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search services…"
+            placeholder={t("searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -165,7 +169,7 @@ export function ServicesManager() {
             className="cursor-pointer"
             onClick={() => setCategory(null)}
           >
-            All
+            {t("all")}
           </Badge>
           {categories.map((c) => (
             <Badge
@@ -181,7 +185,7 @@ export function ServicesManager() {
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button className="ml-auto" />}>
             <Plus className="size-4" />
-            Add Service
+            {t("addService")}
           </DialogTrigger>
           <ServiceFormContent mode="create" onOpenChange={setCreateOpen} onSaved={load} />
         </Dialog>
@@ -209,14 +213,14 @@ export function ServicesManager() {
                     />
                   ) : (
                     <Badge variant={service.isActive ? "secondary" : "outline"}>
-                      {service.isActive ? "Active" : "Inactive"}
+                      {service.isActive ? tCommon("active") : tCommon("inactive")}
                     </Badge>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="Edit"
+                  title={tCommon("edit")}
                   onClick={() => setEditing(service)}
                 >
                   <Pencil className="size-4" />
@@ -225,7 +229,7 @@ export function ServicesManager() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    title="Delete"
+                    title={tCommon("delete")}
                     className="text-destructive"
                     onClick={() => deleteService(service)}
                   >

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api-client";
 import { SOCKET_EVENTS, type ClinicActivityEvent } from "@anora/shared-types";
@@ -15,14 +16,14 @@ const DOT_TONE: Record<ClinicActivityEvent["type"], string> = {
   CANCELLED: "bg-status-cancelled",
 };
 
-const LABEL: Record<ClinicActivityEvent["type"], string> = {
-  REGISTERED: "registered at reception",
-  STARTED: "started consultation",
-  COMPLETED: "completed consultation",
-  CANCELLED: "visit cancelled",
-};
-
 export function LiveActivityFeed() {
+  const t = useTranslations("adminDashboard");
+  const LABEL: Record<ClinicActivityEvent["type"], string> = {
+    REGISTERED: t("activityRegistered"),
+    STARTED: t("activityStarted"),
+    COMPLETED: t("activityCompleted"),
+    CANCELLED: t("activityCancelled"),
+  };
   const [events, setEvents] = useState<ClinicActivityEvent[]>([]);
 
   useEffect(() => {
@@ -42,11 +43,11 @@ export function LiveActivityFeed() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Live Clinic Activity</CardTitle>
+        <CardTitle className="text-base">{t("liveClinicActivity")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {events.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted-foreground">No activity yet today.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("noActivityToday")}</p>
         )}
         {events.map((event, i) => (
           <div key={i} className="flex items-start gap-3">

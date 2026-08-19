@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -38,19 +39,23 @@ type NameForm = z.infer<typeof nameSchema>;
 const usernameSchema = z.object({ username: z.string().min(3) });
 type UsernameForm = z.infer<typeof usernameSchema>;
 
-const passwordSchema = z
-  .object({
-    currentPassword: z.string().min(1),
-    newPassword: z.string().min(8, "At least 8 characters"),
-    confirmPassword: z.string().min(1),
-  })
-  .refine((v) => v.newPassword === v.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-type PasswordForm = z.infer<typeof passwordSchema>;
+function buildPasswordSchema(t: (key: string) => string) {
+  return z
+    .object({
+      currentPassword: z.string().min(1),
+      newPassword: z.string().min(8, t("atLeast8Chars")),
+      confirmPassword: z.string().min(1),
+    })
+    .refine((v) => v.newPassword === v.confirmPassword, {
+      message: t("passwordsDontMatch"),
+      path: ["confirmPassword"],
+    });
+}
+type PasswordForm = z.infer<ReturnType<typeof buildPasswordSchema>>;
 
 export function SettingsForm() {
+  const t = useTranslations("settingsPage");
+  const tUsers = useTranslations("usersPage");
   const user = useAuthStore((s) => s.user);
   const showSound = user?.roles.includes("DOCTOR") ?? false;
   const isAdminLike = user?.roles.some((r) => r === "SUPER_ADMIN" || r === "ADMIN") ?? false;
@@ -71,7 +76,7 @@ export function SettingsForm() {
     setSoundUploadError(null);
     const duration = await getAudioDuration(file).catch(() => null);
     if (duration !== null && duration > 5) {
-      setSoundUploadError("Sound must be 5 seconds or shorter.");
+      setSoundUploadError(t("soundMustBeShort"));
       return;
     }
     setSoundUploading(true);
@@ -82,7 +87,7 @@ export function SettingsForm() {
       );
       updateSelf({ customSoundUrl });
     } catch (err) {
-      setSoundUploadError(err instanceof ApiError ? err.message : "Failed to upload sound");
+      setSoundUploadError(err instanceof ApiError ? err.message : t("failedUploadSound"));
     } finally {
       setSoundUploading(false);
     }
@@ -103,9 +108,9 @@ export function SettingsForm() {
     try {
       await apiFetch("/me/name", { method: "PATCH", body: values });
       updateSelf(values);
-      setNameMsg("Name updated.");
+      setNameMsg(t("nameUpdated"));
     } catch (err) {
-      setNameMsg(err instanceof ApiError ? err.message : "Failed to update name");
+      setNameMsg(err instanceof ApiError ? err.message : t("failedUpdateName"));
     }
   }
 
@@ -118,13 +123,13 @@ export function SettingsForm() {
     setUsernameMsg(null);
     try {
       await apiFetch("/me/username", { method: "PATCH", body: values });
-      setUsernameMsg("Username updated.");
+      setUsernameMsg(t("usernameUpdated"));
     } catch (err) {
-      setUsernameMsg(err instanceof ApiError ? err.message : "Failed to update username");
+      setUsernameMsg(err instanceof ApiError ? err.message : t("failedUpdateUsername"));
     }
   }
 
-  const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(passwordSchema) });
+  const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(buildPasswordSchema(t)) });
 
   async function onPasswordSubmit(values: PasswordForm) {
     setPasswordMsg(null);
@@ -133,10 +138,10 @@ export function SettingsForm() {
         method: "PATCH",
         body: { currentPassword: values.currentPassword, newPassword: values.newPassword },
       });
-      setPasswordMsg("Password updated.");
+      setPasswordMsg(t("passwordUpdated"));
       passwordForm.reset();
     } catch (err) {
-      setPasswordMsg(err instanceof ApiError ? err.message : "Failed to update password");
+      setPasswordMsg(err instanceof ApiError ? err.message : t("failedUpdatePassword"));
     }
   }
 
@@ -145,26 +150,24 @@ export function SettingsForm() {
       {isAdminLike && (
         <Card>
           <CardHeader>
-            <CardTitle>Anora Med Farm</CardTitle>
-            <CardDescription>
-              Clinic-wide settings (branding, working hours, integrations) will live here.
-            </CardDescription>
+            <CardTitle>{t("clinicSettingsTitle")}</CardTitle>
+            <CardDescription>{t("clinicSettingsDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Manage staff in <strong>Users</strong> and pricing in <strong>Services &amp; Diagnoses</strong>.
+            {t("manageStaffText")}
           </CardContent>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Name</CardTitle>
-          <CardDescription>Your display name across the app.</CardDescription>
+          <CardTitle>{t("nameTitle")}</CardTitle>
+          <CardDescription>{t("nameDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={nameForm.handleSubmit(onNameSubmit)} className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>First name</Label>
+              <Label>{tUsers("firstName")}</Label>
               <Input {...nameForm.register("firstName")} />
               {nameForm.formState.errors.firstName && (
                 <p className="text-xs text-destructive">
@@ -173,7 +176,7 @@ export function SettingsForm() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>Last name</Label>
+              <Label>{tUsers("lastName")}</Label>
               <Input {...nameForm.register("lastName")} />
               {nameForm.formState.errors.lastName && (
                 <p className="text-xs text-destructive">
@@ -184,7 +187,7 @@ export function SettingsForm() {
             <div className="flex items-center gap-3 sm:col-span-2">
               <Button type="submit" disabled={nameForm.formState.isSubmitting}>
                 {nameForm.formState.isSubmitting && <Loader2 className="size-4 animate-spin" />}
-                Save
+                {t("save")}
               </Button>
               {nameMsg && <p className="text-sm text-muted-foreground">{nameMsg}</p>}
             </div>
@@ -195,15 +198,13 @@ export function SettingsForm() {
       {showSound && (
         <Card>
           <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Play a sound when a new patient is registered to your queue.
-            </CardDescription>
+            <CardTitle>{t("notificationsTitle")}</CardTitle>
+            <CardDescription>{t("notificationsDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-4">
               <Label htmlFor="sound-toggle" className="text-sm font-medium">
-                Sound notifications
+                {t("soundNotifications")}
               </Label>
               <Switch
                 id="sound-toggle"
@@ -213,12 +214,12 @@ export function SettingsForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>Custom notification sound (max 5 seconds)</Label>
+              <Label>{t("customSoundLabel")}</Label>
               {user?.customSoundUrl ? (
                 <div className="flex items-center gap-3">
                   <audio controls src={`${API_URL}${user.customSoundUrl}`} className="h-9 flex-1" />
                   <Button type="button" variant="outline" size="sm" onClick={removeCustomSound}>
-                    Remove
+                    {t("remove")}
                   </Button>
                 </div>
               ) : (
@@ -232,7 +233,7 @@ export function SettingsForm() {
                   }}
                 />
               )}
-              {soundUploading && <p className="text-xs text-muted-foreground">Uploading…</p>}
+              {soundUploading && <p className="text-xs text-muted-foreground">{t("uploading")}</p>}
               {soundUploadError && <p className="text-xs text-destructive">{soundUploadError}</p>}
             </div>
           </CardContent>
@@ -241,8 +242,8 @@ export function SettingsForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Username</CardTitle>
-          <CardDescription>This is what you use to sign in.</CardDescription>
+          <CardTitle>{t("usernameTitle")}</CardTitle>
+          <CardDescription>{t("usernameDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -250,7 +251,7 @@ export function SettingsForm() {
             className="flex items-end gap-3"
           >
             <div className="flex-1 space-y-1.5">
-              <Label>Username</Label>
+              <Label>{tUsers("username")}</Label>
               <Input {...usernameForm.register("username")} />
               {usernameForm.formState.errors.username && (
                 <p className="text-xs text-destructive">
@@ -260,7 +261,7 @@ export function SettingsForm() {
             </div>
             <Button type="submit" disabled={usernameForm.formState.isSubmitting}>
               {usernameForm.formState.isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              Save
+              {t("save")}
             </Button>
           </form>
           {usernameMsg && <p className="mt-2 text-sm text-muted-foreground">{usernameMsg}</p>}
@@ -269,12 +270,12 @@ export function SettingsForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
+          <CardTitle>{t("changePasswordTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Current password</Label>
+              <Label>{t("currentPassword")}</Label>
               <Input type="password" {...passwordForm.register("currentPassword")} />
               {passwordForm.formState.errors.currentPassword && (
                 <p className="text-xs text-destructive">
@@ -283,7 +284,7 @@ export function SettingsForm() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>New password</Label>
+              <Label>{t("newPassword")}</Label>
               <Input type="password" {...passwordForm.register("newPassword")} />
               {passwordForm.formState.errors.newPassword && (
                 <p className="text-xs text-destructive">
@@ -292,7 +293,7 @@ export function SettingsForm() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>Confirm new password</Label>
+              <Label>{t("confirmNewPassword")}</Label>
               <Input type="password" {...passwordForm.register("confirmPassword")} />
               {passwordForm.formState.errors.confirmPassword && (
                 <p className="text-xs text-destructive">
@@ -303,7 +304,7 @@ export function SettingsForm() {
             {passwordMsg && <p className="text-sm text-muted-foreground">{passwordMsg}</p>}
             <Button type="submit" disabled={passwordForm.formState.isSubmitting}>
               {passwordForm.formState.isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              Update Password
+              {t("updatePassword")}
             </Button>
           </form>
         </CardContent>

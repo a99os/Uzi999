@@ -1,0 +1,3 @@
+api.anoramedfarm.uz {
+	reverse_proxy api:4000
+}

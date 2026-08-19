@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api-client";
 import { format } from "date-fns";
 
 export function PatientTrafficChart() {
+  const t = useTranslations("adminDashboard");
   const [data, setData] = useState<{ date: string; count: number }[] | null>(null);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function PatientTrafficChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Patient Traffic</CardTitle>
+        <CardTitle className="text-base">{t("patientTraffic")}</CardTitle>
       </CardHeader>
       <CardContent className="h-72">
         {data && (

@@ -94,15 +94,31 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 }
 
 export async function apiUpload<T>(path: string, file: File): Promise<T> {
-  const token = useAuthStore.getState().accessToken;
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "POST",
-    credentials: "include",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: form,
-  });
+
+  const doUpload = async (accessToken: string | null) =>
+    fetch(`${API_URL}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      body: form,
+    });
+
+  let res = await doUpload(useAuthStore.getState().accessToken);
+
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      const { user, setSession, clear } = useAuthStore.getState();
+      if (user) setSession(newToken, user);
+      else clear();
+      res = await doUpload(newToken);
+    } else {
+      useAuthStore.getState().clear();
+    }
+  }
+
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: res.statusText }));
     const { error: message, ...payload } = data;

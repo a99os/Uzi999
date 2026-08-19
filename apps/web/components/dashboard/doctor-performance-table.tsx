@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api-client";
 import { formatSom } from "@/lib/currency";
@@ -13,6 +14,7 @@ interface DoctorStat {
 }
 
 export function DoctorPerformanceTable() {
+  const t = useTranslations("adminDashboard");
   const [stats, setStats] = useState<DoctorStat[] | null>(null);
 
   useEffect(() => {
@@ -27,11 +29,11 @@ export function DoctorPerformanceTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Doctor Performance Today</CardTitle>
+        <CardTitle className="text-base">{t("doctorPerformanceToday")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {stats?.length === 0 && (
-          <p className="py-6 text-center text-sm text-muted-foreground">No visits recorded yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("noVisitsYet")}</p>
         )}
         {stats?.map((s) => (
           <div
@@ -40,7 +42,7 @@ export function DoctorPerformanceTable() {
           >
             <span className="font-medium">{s.doctorName}</span>
             <div className="flex items-center gap-4 text-muted-foreground">
-              <span>{s.patients} patients</span>
+              <span>{t("patientsCount", { count: s.patients })}</span>
               <span className="font-medium text-primary">{formatSom(s.revenue)}</span>
             </div>
           </div>

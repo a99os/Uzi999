@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +29,8 @@ export default function ConsultationPage({
 }: PageProps<"/consultation/[queueEntryId]">) {
   const { queueEntryId } = use(params);
   const router = useRouter();
+  const t = useTranslations("consultationPage");
+  const tCommon = useTranslations("common");
   const confirm = useConfirm();
   const entries = useQueueStore((s) => s.entries);
   const entry = entries.find((e) => e.id === queueEntryId);
@@ -53,9 +56,9 @@ export default function ConsultationPage({
 
   async function completeConsultation() {
     const ok = await confirm({
-      title: "Complete this consultation?",
-      description: "The next waiting patient will become your current patient.",
-      confirmLabel: "Complete",
+      title: t("completeConfirmTitle"),
+      description: t("completeConfirmDesc"),
+      confirmLabel: t("completeConfirmLabel"),
     });
     if (!ok) return;
     setCompleting(true);
@@ -71,9 +74,9 @@ export default function ConsultationPage({
   if (!entry) {
     return (
       <>
-        <Topbar title="Consultation" />
+        <Topbar title={t("title")} />
         <div className="p-8 text-sm text-muted-foreground">
-          This patient is no longer in your active queue.
+          {t("noLongerActive")}
         </div>
       </>
     );
@@ -83,12 +86,12 @@ export default function ConsultationPage({
     <>
       <Topbar
         title={`${entry.patient.lastName} ${entry.patient.firstName}`}
-        subtitle={`${entry.patient.birthYear} · Patient ID #${entry.patient.id.slice(-6)}${saving ? " · Saving…" : ""}`}
+        subtitle={`${entry.patient.birthYear} · ${t("patientIdLabel", { id: entry.patient.id.slice(-6) })}${saving ? ` · ${t("saving")}` : ""}`}
         showBack
         action={
           <Button onClick={completeConsultation} disabled={completing}>
             {completing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-            Complete Consultation
+            {t("completeConsultation")}
           </Button>
         }
       />
@@ -96,7 +99,7 @@ export default function ConsultationPage({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Diagnosis</CardTitle>
+              <CardTitle className="text-base">{t("diagnosis")}</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -104,14 +107,14 @@ export default function ConsultationPage({
                 value={draft.diagnosis ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, diagnosis: e.target.value }))}
                 onBlur={saveDraft}
-                placeholder="Enter diagnosis…"
+                placeholder={t("diagnosisPlaceholder")}
               />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Medical Notes</CardTitle>
+              <CardTitle className="text-base">{t("medicalNotes")}</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -119,14 +122,14 @@ export default function ConsultationPage({
                 value={draft.medicalNotes ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, medicalNotes: e.target.value }))}
                 onBlur={saveDraft}
-                placeholder="Examination findings, observations…"
+                placeholder={t("medicalNotesPlaceholder")}
               />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Prescription</CardTitle>
+              <CardTitle className="text-base">{t("prescription")}</CardTitle>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -134,14 +137,14 @@ export default function ConsultationPage({
                 value={draft.prescription ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, prescription: e.target.value }))}
                 onBlur={saveDraft}
-                placeholder="Medications and dosage…"
+                placeholder={t("prescriptionPlaceholder")}
               />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Recommendations</CardTitle>
+              <CardTitle className="text-base">{t("recommendations")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
@@ -149,10 +152,10 @@ export default function ConsultationPage({
                 value={draft.recommendations ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, recommendations: e.target.value }))}
                 onBlur={saveDraft}
-                placeholder="Lifestyle, follow-up guidance…"
+                placeholder={t("recommendationsPlaceholder")}
               />
               <div className="space-y-1.5">
-                <Label>Follow-up date</Label>
+                <Label>{t("followUpDate")}</Label>
                 <Input
                   type="date"
                   value={draft.followUpDate?.slice(0, 10) ?? ""}
@@ -173,13 +176,13 @@ export default function ConsultationPage({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Patient Information</CardTitle>
+              <CardTitle className="text-base">{t("patientInformation")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
               <p className="font-medium">
                 {entry.patient.lastName} {entry.patient.firstName}
               </p>
-              <p className="text-muted-foreground">Born {entry.patient.birthYear}</p>
+              <p className="text-muted-foreground">{tCommon("bornYear", { year: entry.patient.birthYear })}</p>
               {entry.patient.phone && <p className="text-muted-foreground">{entry.patient.phone}</p>}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {entry.services.map((s) => (
@@ -193,7 +196,7 @@ export default function ConsultationPage({
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Visit History</CardTitle>
+              <CardTitle className="text-base">{t("visitHistory")}</CardTitle>
             </CardHeader>
             <CardContent>
               <PatientVisitHistory

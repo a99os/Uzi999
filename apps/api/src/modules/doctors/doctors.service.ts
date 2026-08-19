@@ -4,7 +4,7 @@ import type { DoctorSummary } from "@anora/shared-types";
 export async function listDoctors(): Promise<DoctorSummary[]> {
   const doctors = await prisma.doctorProfile.findMany({
     include: {
-      user: true,
+      user: { include: { roles: { include: { role: true } } } },
       queueEntries: {
         where: { status: { in: ["WAITING", "IN_CONSULTATION"] } },
         select: { status: true },
@@ -14,7 +14,11 @@ export async function listDoctors(): Promise<DoctorSummary[]> {
   });
 
   return doctors
-    .filter((d) => d.user.status === "ACTIVE")
+    .filter(
+      (d) =>
+        d.user.status === "ACTIVE" &&
+        d.user.roles.some((r) => r.role.name === "DOCTOR"),
+    )
     .map((d) => ({
       id: d.id,
       userId: d.userId,

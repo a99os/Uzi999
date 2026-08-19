@@ -19,6 +19,11 @@ export async function upsertConsultation(
   const entry = await prisma.queueEntry.findUnique({ where: { id: queueEntryId } });
   if (!entry) throw new HttpError(404, "Queue entry not found");
 
+  const myProfile = await prisma.doctorProfile.findUnique({ where: { userId: doctorUserId } });
+  if (!myProfile || myProfile.id !== entry.doctorProfileId) {
+    throw new HttpError(403, "You can only edit consultations for your own patients");
+  }
+
   return prisma.consultation.upsert({
     where: { queueEntryId },
     create: {

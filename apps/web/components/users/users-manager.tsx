@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { ROLE_NAMES, type RoleName } from "@anora/shared-types";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { ROLE_LABEL } from "@/lib/nav-config";
@@ -38,26 +39,30 @@ interface UserRow {
   createdById: string | null;
 }
 
-const createSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  username: z.string().min(3, "At least 3 characters"),
-  email: z.string().email().optional().or(z.literal("")),
-  password: z.string().min(8, "At least 8 characters"),
-  roles: z.array(z.enum(ROLE_NAMES)).min(1, "Select at least one role"),
-  specialization: z.string().optional(),
-});
-type CreateForm = z.infer<typeof createSchema>;
+function buildCreateSchema(t: (key: string) => string) {
+  return z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    username: z.string().min(3, t("atLeast3Chars")),
+    email: z.string().email().optional().or(z.literal("")),
+    password: z.string().min(8, t("atLeast8Chars")),
+    roles: z.array(z.enum(ROLE_NAMES)).min(1, t("selectAtLeastOneRole")),
+    specialization: z.string().optional(),
+  });
+}
+type CreateForm = z.infer<ReturnType<typeof buildCreateSchema>>;
 
-const editSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  username: z.string().min(3, "At least 3 characters"),
-  roles: z.array(z.enum(ROLE_NAMES)).min(1, "Select at least one role"),
-  specialization: z.string().optional(),
-  newPassword: z.string().min(8, "At least 8 characters").optional().or(z.literal("")),
-});
-type EditForm = z.infer<typeof editSchema>;
+function buildEditSchema(t: (key: string) => string) {
+  return z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    username: z.string().min(3, t("atLeast3Chars")),
+    roles: z.array(z.enum(ROLE_NAMES)).min(1, t("selectAtLeastOneRole")),
+    specialization: z.string().optional(),
+    newPassword: z.string().min(8, t("atLeast8Chars")).optional().or(z.literal("")),
+  });
+}
+type EditForm = z.infer<ReturnType<typeof buildEditSchema>>;
 
 function RoleCheckboxes({
   roles,
@@ -86,6 +91,8 @@ function RoleCheckboxes({
 }
 
 export function UsersManager() {
+  const t = useTranslations("usersPage");
+  const tCommon = useTranslations("common");
   const currentUser = useAuthStore((s) => s.user);
   const confirm = useConfirm();
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -102,7 +109,7 @@ export function UsersManager() {
   useEffect(load, []);
 
   const createForm = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
+    resolver: zodResolver(buildCreateSchema(t)),
     defaultValues: { roles: [] },
   });
   const createRoles = createForm.watch("roles");
@@ -118,11 +125,11 @@ export function UsersManager() {
       setCreateOpen(false);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Failed to create user");
+      setFormError(err instanceof ApiError ? err.message : t("failedToCreate"));
     }
   }
 
-  const editForm = useForm<EditForm>({ resolver: zodResolver(editSchema) });
+  const editForm = useForm<EditForm>({ resolver: zodResolver(buildEditSchema(t)) });
   const editRoles = editForm.watch("roles");
 
   function openEdit(user: UserRow) {
@@ -156,15 +163,15 @@ export function UsersManager() {
       setEditing(null);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Failed to update user");
+      setFormError(err instanceof ApiError ? err.message : t("failedToUpdate"));
     }
   }
 
   async function deleteUser(user: UserRow) {
     const ok = await confirm({
-      title: `Delete ${user.firstName} ${user.lastName}?`,
-      description: "They won't be able to sign in until reactivated.",
-      confirmLabel: "Delete",
+      title: t("deleteConfirmTitle", { name: `${user.firstName} ${user.lastName}` }),
+      description: t("deleteConfirmDesc"),
+      confirmLabel: tCommon("delete"),
       destructive: true,
     });
     if (!ok) return;
@@ -178,25 +185,25 @@ export function UsersManager() {
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button />}>
             <Plus className="size-4" />
-            Add User
+            {t("addUser")}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add User</DialogTitle>
+              <DialogTitle>{t("addUser")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>First name</Label>
+                  <Label>{t("firstName")}</Label>
                   <Input {...createForm.register("firstName")} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Last name</Label>
+                  <Label>{t("lastName")}</Label>
                   <Input {...createForm.register("lastName")} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Username</Label>
+                <Label>{t("username")}</Label>
                 <Input {...createForm.register("username")} />
                 {createForm.formState.errors.username && (
                   <p className="text-xs text-destructive">
@@ -205,11 +212,11 @@ export function UsersManager() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label>Email (optional)</Label>
+                <Label>{t("emailOptional")}</Label>
                 <Input type="email" {...createForm.register("email")} />
               </div>
               <div className="space-y-1.5">
-                <Label>Temporary password</Label>
+                <Label>{t("temporaryPassword")}</Label>
                 <Input type="password" {...createForm.register("password")} />
                 {createForm.formState.errors.password && (
                   <p className="text-xs text-destructive">
@@ -218,7 +225,7 @@ export function UsersManager() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Roles</Label>
+                <Label>{t("rolesLabel")}</Label>
                 <Controller
                   control={createForm.control}
                   name="roles"
@@ -238,13 +245,13 @@ export function UsersManager() {
               </div>
               {createRoles?.includes("DOCTOR") && (
                 <div className="space-y-1.5">
-                  <Label>Specialization</Label>
-                  <Input placeholder="Cardiology, Neurology…" {...createForm.register("specialization")} />
+                  <Label>{t("specialization")}</Label>
+                  <Input placeholder={t("specializationPlaceholder")} {...createForm.register("specialization")} />
                 </div>
               )}
               {formError && <p className="text-sm text-destructive">{formError}</p>}
               <Button type="submit" className="w-full" disabled={createForm.formState.isSubmitting}>
-                Create User
+                {t("createUser")}
               </Button>
             </form>
           </DialogContent>
@@ -286,10 +293,10 @@ export function UsersManager() {
                       : "bg-status-cancelled-bg text-status-cancelled"
                   }
                 >
-                  {u.status === "ACTIVE" ? "Active" : "Inactive"}
+                  {u.status === "ACTIVE" ? tCommon("active") : tCommon("inactive")}
                 </Badge>
                 {canManage && (
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(u)} title="Edit">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(u)} title={tCommon("edit")}>
                     <Pencil className="size-4" />
                   </Button>
                 )}
@@ -298,7 +305,7 @@ export function UsersManager() {
                     variant="ghost"
                     size="icon"
                     onClick={() => deleteUser(u)}
-                    title="Delete"
+                    title={tCommon("delete")}
                     className="text-destructive"
                   >
                     <Trash2 className="size-4" />
@@ -314,22 +321,22 @@ export function UsersManager() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Edit {editing?.firstName} {editing?.lastName}
+              {t("editUserTitle", { name: `${editing?.firstName ?? ""} ${editing?.lastName ?? ""}` })}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={editForm.handleSubmit(onEdit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>First name</Label>
+                <Label>{t("firstName")}</Label>
                 <Input {...editForm.register("firstName")} />
               </div>
               <div className="space-y-1.5">
-                <Label>Last name</Label>
+                <Label>{t("lastName")}</Label>
                 <Input {...editForm.register("lastName")} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Username</Label>
+              <Label>{t("username")}</Label>
               <Input {...editForm.register("username")} />
               {editForm.formState.errors.username && (
                 <p className="text-xs text-destructive">
@@ -338,7 +345,7 @@ export function UsersManager() {
               )}
             </div>
             <div className="space-y-2">
-              <Label>Roles</Label>
+              <Label>{t("rolesLabel")}</Label>
               <Controller
                 control={editForm.control}
                 name="roles"
@@ -353,13 +360,13 @@ export function UsersManager() {
             </div>
             {editRoles?.includes("DOCTOR") && (
               <div className="space-y-1.5">
-                <Label>Specialization</Label>
-                <Input placeholder="Cardiology, Neurology…" {...editForm.register("specialization")} />
+                <Label>{t("specialization")}</Label>
+                <Input placeholder={t("specializationPlaceholder")} {...editForm.register("specialization")} />
               </div>
             )}
             <div className="space-y-1.5 border-t pt-4">
-              <Label>Reset password (optional)</Label>
-              <Input type="password" placeholder="Leave blank to keep current password" {...editForm.register("newPassword")} />
+              <Label>{t("resetPasswordOptional")}</Label>
+              <Input type="password" placeholder={t("leaveBlankPassword")} {...editForm.register("newPassword")} />
               {editForm.formState.errors.newPassword && (
                 <p className="text-xs text-destructive">
                   {editForm.formState.errors.newPassword.message}
@@ -368,7 +375,7 @@ export function UsersManager() {
             </div>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
             <Button type="submit" className="w-full" disabled={editForm.formState.isSubmitting}>
-              Save Changes
+              {t("saveChanges")}
             </Button>
           </form>
         </DialogContent>

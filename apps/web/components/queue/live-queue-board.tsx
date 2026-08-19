@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
@@ -13,6 +14,7 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function LiveQueueBoard({ compact }: { compact?: boolean } = {}) {
+  const t = useTranslations("doctorDashboard");
   const [doctors, setDoctors] = useState<DoctorSummary[]>([]);
   const [queues, setQueues] = useState<Record<string, QueueEntrySummary[]>>({});
 
@@ -61,12 +63,12 @@ export function LiveQueueBoard({ compact }: { compact?: boolean } = {}) {
                   </p>
                 </div>
                 <Badge className={cn("text-[11px]", STATUS_TONE[entry.status])}>
-                  {entry.status === "IN_CONSULTATION" ? "In consultation" : "Waiting"}
+                  {entry.status === "IN_CONSULTATION" ? t("statusInConsultation") : t("statusWaiting")}
                 </Badge>
               </div>
             ))}
             {(queues[d.id]?.length ?? 0) === 0 && (
-              <p className="py-3 text-center text-xs text-muted-foreground">Queue empty</p>
+              <p className="py-3 text-center text-xs text-muted-foreground">{t("queueEmpty")}</p>
             )}
           </CardContent>
         </Card>

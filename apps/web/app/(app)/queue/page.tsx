@@ -1,10 +1,14 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { QueueRegisterSection } from "@/components/queue/queue-register-section";
 
 export default function QueuePage() {
+  const t = useTranslations("queuePage");
   return (
     <>
-      <Topbar title="Clinic Queue" subtitle="Live view across every doctor" />
+      <Topbar title={t("title")} subtitle={t("subtitle")} />
       <QueueRegisterSection />
     </>
   );

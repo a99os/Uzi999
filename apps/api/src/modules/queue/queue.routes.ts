@@ -28,7 +28,7 @@ queueRouter.get(
 
 queueRouter.get(
   "/registered-today",
-  authorize("ADMIN", "MANAGER"),
+  authorize("SUPER_ADMIN", "ADMIN", "MANAGER"),
   asyncHandler(async (_req, res) => {
     res.json(await queueService.getRegisteredToday());
   }),
@@ -97,6 +97,18 @@ queueRouter.post(
   }),
 );
 
+async function assertOwnsEntry(userId: string, queueEntryId: string) {
+  const entry = await prisma.queueEntry.findUnique({
+    where: { id: queueEntryId },
+    select: { doctorProfileId: true },
+  });
+  if (!entry) throw new HttpError(404, "Queue entry not found");
+  const myProfile = await prisma.doctorProfile.findUnique({ where: { userId } });
+  if (!myProfile || myProfile.id !== entry.doctorProfileId) {
+    throw new HttpError(403, "You can only manage your own queue");
+  }
+}
+
 async function emitQueueUpdate(doctorProfileId: string) {
   const io = getIO();
   const entries = await queueService.getQueueForDoctor(doctorProfileId);
@@ -129,6 +141,7 @@ queueRouter.post(
   "/:id/start",
   authorize("DOCTOR"),
   asyncHandler(async (req, res) => {
+    await assertOwnsEntry(req.user!.sub, req.params.id);
     const entry = await queueService.startConsultation(req.params.id);
     const io = getIO();
     io.to(roomForDoctor(entry.doctorProfileId)).emit(SOCKET_EVENTS.CONSULTATION_STARTED, {
@@ -152,6 +165,7 @@ queueRouter.post(
   "/:id/skip",
   authorize("DOCTOR"),
   asyncHandler(async (req, res) => {
+    await assertOwnsEntry(req.user!.sub, req.params.id);
     const entry = await queueService.skipPatient(req.params.id);
     await emitQueueUpdate(entry.doctorProfileId);
     await emitEntryUpdate(entry.id);
@@ -163,6 +177,7 @@ queueRouter.post(
   "/:id/return",
   authorize("DOCTOR"),
   asyncHandler(async (req, res) => {
+    await assertOwnsEntry(req.user!.sub, req.params.id);
     const entry = await queueService.returnToQueue(req.params.id);
     await emitQueueUpdate(entry.doctorProfileId);
     await emitEntryUpdate(entry.id);
@@ -174,6 +189,7 @@ queueRouter.post(
   "/:id/complete",
   authorize("DOCTOR"),
   asyncHandler(async (req, res) => {
+    await assertOwnsEntry(req.user!.sub, req.params.id);
     const { doctorProfileId, nextCurrentEntryId } = await queueService.completeConsultation(
       req.params.id,
     );

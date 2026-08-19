@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { KpiCard } from "@/components/admin/kpi-card";
 import { PatientTrafficChart } from "@/components/admin/patient-traffic-chart";
 import { LiveActivityFeed } from "@/components/admin/live-activity-feed";
@@ -17,6 +18,7 @@ interface Overview {
 }
 
 export function AdminOverviewSection() {
+  const t = useTranslations("adminDashboard");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [doctors, setDoctors] = useState<DoctorSummary[] | null>(null);
 
@@ -33,21 +35,21 @@ export function AdminOverviewSection() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Today's Patients" value={overview?.totalPatients ?? "—"} icon={Users} tone="primary" />
+        <KpiCard label={t("todaysPatients")} value={overview?.totalPatients ?? "—"} icon={Users} tone="primary" />
         <KpiCard
-          label="Currently Waiting"
+          label={t("currentlyWaiting")}
           value={overview?.waitingPatients ?? "—"}
           icon={Clock}
           tone="turquoise"
         />
         <KpiCard
-          label="Doctors Working"
+          label={t("doctorsWorking")}
           value={doctors?.length ?? "—"}
           icon={Stethoscope}
           tone="neutral"
         />
         <KpiCard
-          label="Today's Revenue"
+          label={t("todaysRevenue")}
           value={overview ? formatSom(overview.revenue) : "—"}
           icon={DollarSign}
           tone="green"

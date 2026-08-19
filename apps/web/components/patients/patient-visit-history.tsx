@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/api-client";
 import { formatSom } from "@/lib/currency";
@@ -33,14 +34,24 @@ export function PatientVisitHistory({
   compact?: boolean;
   onlyWithConsultation?: boolean;
 }) {
+  const t = useTranslations("patients");
+  const tCommon = useTranslations("common");
+  const tReg = useTranslations("registration");
   const [patient, setPatient] = useState<PatientWithVisits | null>(null);
 
   useEffect(() => {
     apiFetch<PatientWithVisits>(`/patients/${patientId}`).then(setPatient);
   }, [patientId]);
 
+  const STATUS_LABEL: Record<string, string> = {
+    WAITING: tReg("statusWaiting"),
+    IN_CONSULTATION: tReg("statusInConsultation"),
+    COMPLETED: tReg("statusCompleted"),
+    CANCELLED: tReg("statusCancelled"),
+  };
+
   if (!patient) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
+    return <p className="text-sm text-muted-foreground">{tCommon("loading")}</p>;
   }
 
   const visits = patient.queueEntries
@@ -49,7 +60,7 @@ export function PatientVisitHistory({
     .slice(0, limit ?? Infinity);
 
   if (visits.length === 0) {
-    return <p className="text-sm text-muted-foreground">No previous visits.</p>;
+    return <p className="text-sm text-muted-foreground">{t("noPreviousVisits")}</p>;
   }
 
   return (
@@ -69,12 +80,12 @@ export function PatientVisitHistory({
           </p>
           {!compact && entry.consultation?.diagnosis && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Diagnosis: {entry.consultation.diagnosis}
+              {t("diagnosisLabel", { diagnosis: entry.consultation.diagnosis })}
             </p>
           )}
           {!compact && (
             <Badge variant="secondary" className="mt-1">
-              {entry.status.replace("_", " ")}
+              {STATUS_LABEL[entry.status] ?? entry.status}
             </Badge>
           )}
         </div>

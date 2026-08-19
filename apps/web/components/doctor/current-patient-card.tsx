@@ -208,7 +208,7 @@ export function CurrentPatientCard({
 
           <div className="border-t pt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Previous Visits
+              {t("previousVisits")}
             </p>
             <PatientVisitHistory
               patientId={entry.patient.id}

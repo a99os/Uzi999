@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -9,6 +10,7 @@ import { apiFetch } from "@/lib/api-client";
 import type { DoctorSummary } from "@anora/shared-types";
 
 export default function DoctorsPage() {
+  const t = useTranslations("doctorsPage");
   const [doctors, setDoctors] = useState<DoctorSummary[]>([]);
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export default function DoctorsPage() {
 
   return (
     <>
-      <Topbar title="Doctors" subtitle="Live roster and availability" />
+      <Topbar title={t("title")} subtitle={t("subtitle")} />
       <div className="grid gap-4 p-8 sm:grid-cols-2 lg:grid-cols-3">
         {doctors.map((d) => {
           const initials = `${d.firstName[0]}${d.lastName[0]}`.toUpperCase();
@@ -32,7 +34,9 @@ export default function DoctorsPage() {
                     Dr. {d.firstName} {d.lastName}
                   </p>
                   <p className="truncate text-sm text-muted-foreground">{d.specialization}</p>
-                  <p className="text-xs text-muted-foreground">Queue: {d.waitingCount}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("queueLabel", { count: d.waitingCount })}
+                  </p>
                 </div>
                 <Badge
                   className={
@@ -41,7 +45,7 @@ export default function DoctorsPage() {
                       : "bg-status-completed-bg text-status-completed"
                   }
                 >
-                  {d.isBusy ? "Busy" : "Available"}
+                  {d.isBusy ? t("busy") : t("available")}
                 </Badge>
               </CardContent>
             </Card>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Topbar } from "@/components/layout/topbar";
 import { useAuthStore } from "@/lib/auth-store";
 import { AdminOverviewSection } from "@/components/dashboard/admin-overview-section";
@@ -10,6 +11,7 @@ function isAdminLike(roles: string[]) {
 }
 
 export function UnifiedDashboard() {
+  const t = useTranslations("adminDashboard");
   const user = useAuthStore((s) => s.user);
   if (!user) return null;
 
@@ -18,7 +20,7 @@ export function UnifiedDashboard() {
 
   return (
     <>
-      <Topbar title="Dashboard" />
+      <Topbar title={t("dashboardTitle")} />
       <div className="space-y-8 p-8">
         {doctorSection && <DoctorOperationsSection />}
         {adminSection && <AdminOverviewSection />}

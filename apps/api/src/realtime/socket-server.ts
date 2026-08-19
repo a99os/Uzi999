@@ -44,7 +44,11 @@ export function initSocketServer(httpServer: HttpServer): AppIO {
       if (profile) socket.join(roomForDoctor(profile.id));
     }
 
-    if (user.roles.includes("ADMIN") || user.roles.includes("MANAGER")) {
+    if (
+      user.roles.includes("SUPER_ADMIN") ||
+      user.roles.includes("ADMIN") ||
+      user.roles.includes("MANAGER")
+    ) {
       socket.join(CLINIC_ROOM);
     }
   });
