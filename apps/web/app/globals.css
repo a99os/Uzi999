@@ -159,5 +159,11 @@
   }
   html {
     @apply font-sans;
+    /* Scale the rem-based UI with the actual browser viewport width instead
+       of a fixed 16px, so the same layout reads the same physical size on a
+       1920px display and a 2560px+ display rather than shrinking as pixel
+       density goes up. 1920px -> 16px (today's baseline), 2560px -> ~21.3px,
+       capped at 24px so ultra-wide/4K windows don't scale without bound. */
+    font-size: clamp(16px, 0.8333vw, 24px);
   }
 }
