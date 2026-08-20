@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api-client";
+import { useConfirm } from "@/components/providers/confirm-provider";
 import type { DoctorSummary, QueueEntrySummary } from "@anora/shared-types";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 const STATUS_TONE: Record<string, string> = {
   WAITING: "bg-status-waiting-bg text-status-waiting",
@@ -15,10 +18,11 @@ const STATUS_TONE: Record<string, string> = {
 
 export function LiveQueueBoard({ compact }: { compact?: boolean } = {}) {
   const t = useTranslations("doctorDashboard");
+  const confirm = useConfirm();
   const [doctors, setDoctors] = useState<DoctorSummary[]>([]);
   const [queues, setQueues] = useState<Record<string, QueueEntrySummary[]>>({});
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiFetch<DoctorSummary[]>("/doctors").then(async (list) => {
       setDoctors(list);
       const entries = await Promise.all(
@@ -29,6 +33,20 @@ export function LiveQueueBoard({ compact }: { compact?: boolean } = {}) {
       setQueues(map);
     });
   }, []);
+
+  useEffect(load, [load]);
+
+  async function cancelEntry(entry: QueueEntrySummary) {
+    const ok = await confirm({
+      title: t("cancelConfirmTitle", { name: `${entry.patient.firstName} ${entry.patient.lastName}` }),
+      description: t("cancelConfirmDesc"),
+      confirmLabel: t("cancelConfirmLabel"),
+      destructive: true,
+    });
+    if (!ok) return;
+    await apiFetch(`/queue/${entry.id}/cancel`, { method: "POST" });
+    load();
+  }
 
   return (
     <div
@@ -65,6 +83,17 @@ export function LiveQueueBoard({ compact }: { compact?: boolean } = {}) {
                 <Badge className={cn("text-[11px]", STATUS_TONE[entry.status])}>
                   {entry.status === "IN_CONSULTATION" ? t("statusInConsultation") : t("statusWaiting")}
                 </Badge>
+                {entry.status === "WAITING" && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-destructive"
+                    title={t("cancelEntry")}
+                    onClick={() => cancelEntry(entry)}
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                )}
               </div>
             ))}
             {(queues[d.id]?.length ?? 0) === 0 && (

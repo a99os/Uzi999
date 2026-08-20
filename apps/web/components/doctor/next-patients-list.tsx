@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getServiceIcon } from "@/lib/icon-map";
 import { apiFetch } from "@/lib/api-client";
 import { useConfirm } from "@/components/providers/confirm-provider";
-import { SkipForward } from "lucide-react";
+import { SkipForward, X } from "lucide-react";
 
 export function NextPatientsList({
   entries,
@@ -27,6 +27,18 @@ export function NextPatientsList({
     });
     if (!ok) return;
     await apiFetch(`/queue/${entry.id}/skip`, { method: "POST" });
+    onChanged();
+  }
+
+  async function cancelEntry(entry: QueueEntrySummary) {
+    const ok = await confirm({
+      title: t("cancelConfirmTitle", { name: `${entry.patient.firstName} ${entry.patient.lastName}` }),
+      description: t("cancelConfirmDesc"),
+      confirmLabel: t("cancelConfirmLabel"),
+      destructive: true,
+    });
+    if (!ok) return;
+    await apiFetch(`/queue/${entry.id}/cancel`, { method: "POST" });
     onChanged();
   }
 
@@ -63,6 +75,15 @@ export function NextPatientsList({
               </div>
               <Button size="icon" variant="ghost" title={t("skip")} onClick={() => skip(entry)}>
                 <SkipForward className="size-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-destructive"
+                title={t("cancelEntry")}
+                onClick={() => cancelEntry(entry)}
+              >
+                <X className="size-4" />
               </Button>
             </div>
           );

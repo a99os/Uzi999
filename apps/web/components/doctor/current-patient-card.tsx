@@ -11,7 +11,7 @@ import { apiFetch, ApiError } from "@/lib/api-client";
 import { getServiceIcon } from "@/lib/icon-map";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import { PatientVisitHistory } from "@/components/patients/patient-visit-history";
-import { Clock, Play, SkipForward, RotateCcw, CheckCircle2, Loader2 } from "lucide-react";
+import { Clock, Play, SkipForward, RotateCcw, CheckCircle2, Loader2, X } from "lucide-react";
 import { format } from "date-fns";
 
 export function CurrentPatientCard({
@@ -151,6 +151,28 @@ export function CurrentPatientCard({
                 >
                   <SkipForward className="size-4" />
                   {t("skip")}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-destructive"
+                  onClick={() =>
+                    run(
+                      "cancel",
+                      {
+                        title: t("cancelConfirmTitle", {
+                          name: `${entry.patient.firstName} ${entry.patient.lastName}`,
+                        }),
+                        description: t("cancelConfirmDesc"),
+                        confirmLabel: t("cancelConfirmLabel"),
+                        destructive: true,
+                      },
+                      () => apiFetch(`/queue/${entry.id}/cancel`, { method: "POST" }),
+                    )
+                  }
+                  disabled={busy !== null}
+                >
+                  <X className="size-4" />
+                  {t("cancelEntry")}
                 </Button>
               </>
             )}

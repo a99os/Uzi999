@@ -174,6 +174,23 @@ queueRouter.post(
 );
 
 queueRouter.post(
+  "/:id/cancel",
+  authorize("SUPER_ADMIN", "ADMIN", "MANAGER", "DOCTOR"),
+  asyncHandler(async (req, res) => {
+    const roles = req.user!.roles;
+    const isPrivileged =
+      roles.includes("SUPER_ADMIN") || roles.includes("ADMIN") || roles.includes("MANAGER");
+    if (!isPrivileged) {
+      await assertOwnsEntry(req.user!.sub, req.params.id);
+    }
+    const entry = await queueService.cancelEntry(req.params.id);
+    await emitQueueUpdate(entry.doctorProfileId);
+    await emitEntryUpdate(entry.id);
+    res.json(entry);
+  }),
+);
+
+queueRouter.post(
   "/:id/return",
   authorize("DOCTOR"),
   asyncHandler(async (req, res) => {

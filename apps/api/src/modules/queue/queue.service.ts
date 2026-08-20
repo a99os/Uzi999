@@ -175,6 +175,16 @@ export async function skipPatient(queueEntryId: string) {
   return entry;
 }
 
+export async function cancelEntry(queueEntryId: string) {
+  const entry = await prisma.queueEntry.findUnique({ where: { id: queueEntryId } });
+  if (!entry || entry.status !== "WAITING") throw new HttpError(409, "Patient is not waiting");
+
+  return prisma.queueEntry.update({
+    where: { id: queueEntryId },
+    data: { status: "CANCELLED", cancelledAt: new Date() },
+  });
+}
+
 export async function returnToQueue(queueEntryId: string) {
   const entry = await prisma.queueEntry.findUnique({ where: { id: queueEntryId } });
   if (!entry || entry.status !== "IN_CONSULTATION") {
